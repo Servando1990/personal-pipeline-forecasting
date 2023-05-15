@@ -56,42 +56,29 @@ app.layout = html.Div(children=[
     html.Div(children=[
         html.Label('Cohort'),
         cohort_dropdown
- 
     ]),
     html.Div(children=[
         html.Label('Feature'),
         feature_dropdown
     ]),
 
+    html.Div(id='graph1-container'),
+
+    html.Div(children='General overview for the selected cohort'),
+
     html.Div(children=[
-        dcc.Graph(id='graph1'),
-        dcc.Graph(id='graph2')
-    ])
+        dcc.Graph(id='graph2'),
+    ]),
 ])
 
 # Define the callbacks for updating the graphs
 
 @app.callback(
-    dash.dependencies.Output('graph1', 'figure'),
+    dash.dependencies.Output('graph1-container', 'children'),
     [dash.dependencies.Input('cohort-dropdown', 'value'),
      dash.dependencies.Input('feature-dropdown', 'value')])
+
 def update_graph1(cohort, feature):
-    df_cohort = df.loc[df.cohort == cohort]
-    df_monthly = df_cohort.groupby(pd.Grouper(level='date', freq='M')).sum()
-    fig = px.bar(df_monthly,
-                  x=df_monthly.index,
-                  y=feature,
-                  barmode='group',
-                  title=f'{feature} {cohort} Monthly'
-                  )
-    return fig
-
-@app.callback(
-    dash.dependencies.Output('graph2', 'figure'),
-    [dash.dependencies.Input('cohort-dropdown', 'value'),
-     dash.dependencies.Input('feature-dropdown', 'value')])
-
-def update_graph2(cohort, feature):
     df_cohort = df.loc[cohort]
     series = df_cohort[feature]
     result = sm.tsa.seasonal_decompose(series, model='additive', period=30)
@@ -126,6 +113,25 @@ def update_graph2(cohort, feature):
     )
 
     return fig
+
+@app.callback(
+    dash.dependencies.Output('graph2', 'figure')
+    [dash.dependencies.Input('cohort-dropdown', 'value')])
+
+def update_graph2(cohort, feature):
+    #df_cohort = df.loc[df.cohort == cohort]
+    df_monthly = df.groupby(['date', 'cohort']).sum().reset_index()
+    print(df_monthly.query("date == '2022-01-01'"))
+    fig = px.bar(df_monthly,
+                  x='date',
+                  y=feature,
+                  color= 'cohort',
+                  barmode='group',
+                  title=f'{feature} {cohort} Monthly'
+                  )
+    return fig
+
+
 
 # Run the app
 if __name__ == '__main__':
